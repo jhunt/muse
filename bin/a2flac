@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Muse;
+
+my @files = split "\0", do { local $/; <STDIN> };
+my $n = 0;
+my $total = scalar @files;
+
+for (sort @files) {
+	$n++;
+	print "$n / $total: Converting $_\n";
+
+	my $flac = convert $_, 'flac'
+		or die "Failed to convert $_: ".Muse::last_error."\n";
+
+	copy_metadata($_, $flac);
+}

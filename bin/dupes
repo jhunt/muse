@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Muse;
+
+my %shas = ();
+
+my @files = do { local $/ = "\0"; <STDIN> };
+for (@files) {
+	s/\0//g;
+	print ">> $_\n";
+	my $sha = waveform_checksum($_);
+	push @{ $shas{$sha} }, $_;
+}
+
+use Data::Dumper;
+print Dumper(\%shas);
