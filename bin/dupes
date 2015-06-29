@@ -5,9 +5,7 @@ use warnings;
 use Muse;
 
 my %shas = ();
-
-my @files = do { local $/ = "\0"; <STDIN> };
-for (@files) {
+for (provided_files) {
 	s/\0//g;
 	print ">> $_\n";
 	my $sha = waveform_checksum($_);

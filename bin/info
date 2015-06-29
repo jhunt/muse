@@ -3,12 +3,11 @@ use strict;
 use warnings;
 use Muse;
 
-my @files = split "\0", do { local $/; <STDIN> };
-
+my @files = provided_files;
 for (sort @files) {
 	my $info = metadata($_);
 
 	print "$_:\n";
-	printf "  %20s : %s\n", $_, $info->{$_} for grep { exists $info->{$_} } fields;
+	printf "  %20s : %s\n", $_, $info->{$_} for grep { exists $info->{$_} } fields();
 	print "\n";
 }

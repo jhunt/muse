@@ -1,0 +1,8 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Muse;
+use Muse::Lang;
+
+my @files = provided_files;
+check($ARGV[0] or "$ENV{HOME}/.muserc", sort @files);

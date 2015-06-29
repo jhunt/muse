@@ -1,0 +1,37 @@
+#
+# muse.rules
+#
+
+@title-must-exist: title exists;
+
+@artist-must-exist: artist exists;
+
+@genre-must-exist: genre exists;
+
+@track-numbers: track exists
+            and tracks exists
+            and track > 0
+            and track <= tracks;
+
+@disc-numbers (discs exists) :
+    disc exists and disc > 0 and disc <= discs;
+
+@genre-is-ok (genre exists):
+       genre = 'Folk'
+    or genre = 'Alternative Rock'
+             # etc.
+             ;
+
+@path-must-be-correct (artist exists and
+                       album  exists and
+                       track  exists and
+                       title  exists) :
+    (disc is empty
+      and path ~ m/\/{{artist}}\/{{album}}\/{{track:%02i}} {{title}}\./)
+  or
+    (disc exists
+     and path ~ m/\/{{artist}}\/{{album}}\/{{disc}}\.{{track:%02i}} {{title}}\./)
+    ;
+
+
+# vim:ft=conf

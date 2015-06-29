@@ -1,0 +1,188 @@
+%left NOT
+%left AND OR
+%left EQ MATCH CMP
+
+%%
+rules:             { [] }
+     | rules rule  { push @{$_[1]}, $_[2]; $_[1] }
+     ;
+
+rule: IDENTIFIER ':' expr ';'               { { rule => $_[1],
+                                                expr => $_[3] } }
+
+    | IDENTIFIER '(' expr ')' ':' expr ';'  { { rule => $_[1],
+                                                cond => $_[3],
+                                                expr => $_[6] } }
+    ;
+
+expr:                         { undef }
+    | expr AND expr           { {  and    => [ $_[1], $_[3] ] } }
+    | expr OR  expr           { {  or     => [ $_[1], $_[3] ] } }
+    | NOT expr                { {  not    =>   $_[2]          } }
+    | FIELD  EQ     value     { { "$_[2]" => [ $_[1], $_[3] ] } }
+    | FIELD  MATCH  PATTERN   { { "$_[2]" => [ $_[1], $_[3] ] } }
+    | FIELD  CMP    number    { { "$_[2]" => [ $_[1], $_[3] ] } }
+
+    | FIELD  IS     EMPTY     { {  empty  =>   $_[1]          } }
+    | FIELD  IS     NOT EMPTY { { "!="    => [ $_[1], ""    ] } }
+    | FIELD  EXISTS           { { "!="    => [ $_[1], ""    ] } }
+
+    | '(' expr ')' { $_[2] }
+    ;
+
+value: STRING
+     | NUMBER
+     | field
+     ;
+
+number: NUMBER
+      | field
+      ;
+
+field: FIELD { "{{$_[1]}}" }
+     ;
+
+%%
+
+sub _q { my ($s, $l) = @_; $s =~ s/\\([$l])/$1/g; $s }
+sub _f { my ($s) = @_; $s =~ s/-//;
+                       $s =~ s/disk/disc/;
+                       $s =~ s/sort$/sortname/;
+                       $s =~ s/^discs$/totaldisc/;
+                       $s =~ s/^tracks$/totaltracks/;
+                       $s }
+sub _  { use Data::Dumper; print STDERR Dumper(\@_); @_ }
+
+sub yyerror
+{
+	my ($Y) = @_;
+	my ($tok, $val, $expect) = ($Y->YYCurtok, $Y->YYCurval, $Y->YYExpect);
+	my ($file, $line) = ($Y->YYData->{FILE}, $Y->YYData->{LINE});
+
+	if (lc($tok) eq lc($val)) {
+		die "syntax error at $file:$line: found '$val' token where we expected '$expect'\n";
+	} else {
+		$tok = lc($tok);
+		die "syntax error at $file:$line: found $tok token '$val' where we expected '$expect'\n";
+	}
+}
+
+sub yylex
+{
+	my ($Y) = @_;
+	while ($Y->YYData->{DATA} =~ s/^(\s+|#.*$)//m) {
+		# ignore whitespace / comments
+		$Y->YYData->{LINE}++ if $1 =~ m/\n/;
+	}
+
+	$Y->YYData->{DATA} =~ s/^(and|&&)//              and return ('AND', 'and');
+	$Y->YYData->{DATA} =~ s/^(or|\|\|)//             and return ('OR',  'or');
+
+	$Y->YYData->{DATA} =~ s/^(!?=)//                 and return ('EQ',    $1);
+	$Y->YYData->{DATA} =~ s/^(!?~)//                 and return ('MATCH', $1);
+	$Y->YYData->{DATA} =~ s/^([<>]=?)//              and return ('CMP',   $1);
+
+	$Y->YYData->{DATA} =~ s/^( [+-]?
+	                           \d+
+	                           (?: \.\d+)     ?
+	                           (?: e[+-]?\d+) ?
+	                         )//x                    and return ('NUMBER', $1);
+
+	$Y->YYData->{DATA} =~ s/^( is
+	                         | not
+	                         | empty
+	                         | exists
+	                         )\b//xi                 and return (uc($1), lc($1));
+
+	$Y->YYData->{DATA} =~ s/^( path
+	                         | filename
+	                         )\b//xi                 and return ('FIELD', "_$1");
+
+	$Y->YYData->{DATA} =~ s/^( album-?artist
+	                         | album-?rating
+	                         | album-?sort
+	                         )\b//xi                 and return ('FIELD', _f($1));
+
+	$Y->YYData->{DATA} =~ s/^( album
+	                         | artist
+	                         | original-?artist
+	                         | composer
+	                         | asin
+	                         | upc
+	                         | title
+	                         | compilation
+	                         | sort
+	                         | genre
+	                         | comment
+	                         | copyright
+	                         | rating
+	                         | dis[kc]s?
+	                         | disc-?title
+	                         | tracks?
+	                         | release-?date
+	                         | year
+	                         | mb_albumid
+	                         | mb_artistid
+	                         | mb_trackid
+	                         | mb_puid
+	                         )\b//xi                 and return ('FIELD', _f($1));
+
+	$Y->YYData->{DATA} =~ s/^@([a-z_][a-z0-9_-]*)//i and return ('IDENTIFIER', $1);
+
+	$Y->YYData->{DATA} =~ s!^m?/(
+	                        (?:
+	                          [^\n\\/]
+	                          | \\\\
+	                          | \\\.
+	                          | \\[dsSwW]
+	                          | \\\/
+	                        )*?
+	                       )/!!x                     and return ('PATTERN', _q($1, q{\\/}));
+
+	$Y->YYData->{DATA} =~ s/^"(
+	                        (?:
+	                          [^\\"]
+	                          | \\\\
+	                          | \\"
+	                        )*?
+	                       )"//x                     and return ('STRING', _q("$1", q{\\"}));
+
+	$Y->YYData->{DATA} =~ s/^'(
+	                        (?:
+	                          [^\\']
+	                          | \\\\
+	                          | \\'
+	                        )*?
+	                       )'//x                     and return ('STRING', _q("$1", q{\\'}));
+
+	$Y->YYData->{DATA} =~ s/^(.)//                   and return ($1, $1);
+	undef;
+}
+
+sub parse
+{
+	my ($class, $file) = @_;
+	open my $fh, "<", $file
+		or die "$file: $!\n";
+
+	my $src = do { local $/; <$fh> };
+	close $fh;
+
+	$class->evaluate($src, $file);
+}
+
+sub evaluate
+{
+	my ($class, $src, $path) = @_;
+	$path ||= '<input>';
+	my $self = __PACKAGE__->new;
+	$self->{USER} = {
+		LINE => 1,
+		FILE => $path,
+		DATA => $src,
+	};
+	return $self->YYParse(
+		yylex   => \&yylex,
+		yyerror => \&yyerror,
+	);
+}

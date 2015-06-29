@@ -9,12 +9,13 @@ use base qw/Exporter/;
 our @EXPORT = qw/
 	waveform_checksum
 
-	fields metadata copy_metadata
+	provided_files
+	fields metadata copy_metadata set_metadata
 
 	convert
 /;
 
-my $LAST_ERROR;
+my $LAST_ERROR = '';
 
 sub last_error
 {
@@ -68,6 +69,13 @@ sub waveform_checksum
 	return $sha->hexdigest;
 }
 
+sub provided_files
+{
+	return @ARGV if @ARGV;
+	die "No files provided.\n" if -t STDIN;
+	my @l; while (<STDIN>) { chomp; push @l, $_; } @l;
+}
+
 sub fields
 {
 	qw/
@@ -77,6 +85,7 @@ sub fields
 		title compilation sortname genre
 		comment copyright rating
 		disc totaldisc disctitle
+		discnumber
 		track totaltracks
 		releasedate year
 		mb_albumid mb_artistid mb_trackid mb_puid
@@ -94,6 +103,8 @@ sub metadata
 		$metadata{$_} = $info->get_data($_)
 			if $info->has_data($_);
 	}
+	$metadata{_path} = $file;
+	($metadata{_filename} = $file) =~ s|.*/||;
 
 	\%metadata;
 }
@@ -101,11 +112,17 @@ sub metadata
 sub copy_metadata
 {
 	my ($from, $to) = @_;
-	my $src = get_metadata($from);
-	my $dst = Music::Tag->new($to, { quiet => 1 });
+	set_metadata($to, metadata($from));
+}
 
-	$dst->set_data($_, $src->{$_}) for keys %$src;
-	$dst->set_tag;
+sub set_metadata
+{
+	my ($file, $meta) = @_;
+	my $info = Music::Tag->new($file, { quiet => 1 });
+	$info->get_tag;
+
+	$info->set_data($_, $meta->{$_}) for grep { ! m/^_/ } keys %$meta;
+	$info->set_tag;
 }
 
 sub convert
@@ -121,13 +138,13 @@ sub convert
 
 	my $ext  = _ext($from);
 	my $base = _base($from);
-	return if -f "$base.$fmt" and !$force;
+	return "$base.$fmt" if -f "$base.$fmt" and !$force;
 
 	$decode{$ext} or die "Don't know how to decode .$ext files\n";
 	$encode{$fmt} or die "Don't know how to encode .$fmt files\n";
 
 	(my $cmd1 = $decode{$ext}) =~ s/{{X}}/_base($from)/ge;
-	(my $cmd2 = $decode{$fmt}) =~ s/{{X}}/_base($from)/ge;
+	(my $cmd2 = $encode{$fmt}) =~ s/{{X}}/_base($from)/ge;
 
 	_run(qq($cmd1 && $cmd2))
 		or return undef;

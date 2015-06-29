@@ -1,0 +1,4 @@
+#!/bin/bash
+set -ex
+
+yapp -m Muse::Grammar -o lib/Muse/Grammar.pm lang/muse.yp

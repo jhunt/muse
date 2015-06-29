@@ -1,0 +1,12 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Muse;
+
+my $meta = {};
+for (grep { m/=/ } @ARGV) {
+	my ($k, $v) = split '=', $_, 2;
+	$meta->{$k} = $v;
+}
+@ARGV = grep { ! m/=/ } @ARGV;
+set_metadata($_, $meta) for provided_files;
