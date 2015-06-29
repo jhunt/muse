@@ -57,9 +57,17 @@ sub waveform_checksum
 		or die "No file extension ($file)\n";
 
 	if ($ext eq 'ogg') {
-		_run(qq(oggdec -o $tmp "$file" 2>&1))
+		_run(qq(oggdec -Q -o $tmp "$file" 2>&1))
 			or die "OGG Vorbis decode of $file failed\n";
 		$sha->addfile($tmp);
+
+	} elsif ($ext eq 'mp3') {
+		_run(qq(lame --decode "$file" $tmp 2>&1))
+			or die "MP3 decode of $file failed\n";
+
+	} elsif ($ext eq 'flac') {
+		_run(qq(flac -s --decode "$file" -o $tmp 2>&1))
+			or die "FLAC decode of $file failed\n";
 
 	} else {
 		die "Unrecognized file extension ($file)\n";
