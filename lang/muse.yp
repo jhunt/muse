@@ -96,6 +96,7 @@ sub yylex
 
 	$Y->YYData->{DATA} =~ s/^( path
 	                         | filename
+	                         | type
 	                         )\b//xi                 and return ('FIELD', "_$1");
 
 	$Y->YYData->{DATA} =~ s/^( album-?artist

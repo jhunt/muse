@@ -32,8 +32,8 @@ sub new {
 	},
 	{#State 1
 		ACTIONS => {
-			'' => 3,
-			'IDENTIFIER' => 4
+			'IDENTIFIER' => 4,
+			'' => 3
 		},
 		GOTOS => {
 			'rule' => 2
@@ -53,20 +53,20 @@ sub new {
 	},
 	{#State 5
 		ACTIONS => {
-			'FIELD' => 9,
+			'FIELD' => 10,
 			"(" => 7,
-			'NOT' => 10
+			'NOT' => 8
 		},
 		DEFAULT => -5,
 		GOTOS => {
-			'expr' => 8
+			'expr' => 9
 		}
 	},
 	{#State 6
 		ACTIONS => {
-			'FIELD' => 9,
-			"(" => 7,
-			'NOT' => 10
+			'FIELD' => 10,
+			'NOT' => 8,
+			"(" => 7
 		},
 		DEFAULT => -5,
 		GOTOS => {
@@ -75,9 +75,9 @@ sub new {
 	},
 	{#State 7
 		ACTIONS => {
-			'NOT' => 10,
-			"(" => 7,
-			'FIELD' => 9
+			'FIELD' => 10,
+			'NOT' => 8,
+			"(" => 7
 		},
 		DEFAULT => -5,
 		GOTOS => {
@@ -86,53 +86,57 @@ sub new {
 	},
 	{#State 8
 		ACTIONS => {
-			'OR' => 15,
-			";" => 13,
-			'AND' => 14
+			"(" => 7,
+			'NOT' => 8,
+			'FIELD' => 10
+		},
+		DEFAULT => -5,
+		GOTOS => {
+			'expr' => 13
 		}
 	},
 	{#State 9
 		ACTIONS => {
-			'CMP' => 20,
-			'IS' => 18,
-			'EXISTS' => 19,
-			'EQ' => 17,
-			'MATCH' => 16
+			";" => 16,
+			'OR' => 15,
+			'AND' => 14
 		}
 	},
 	{#State 10
 		ACTIONS => {
-			'NOT' => 10,
-			"(" => 7,
-			'FIELD' => 9
-		},
-		DEFAULT => -5,
-		GOTOS => {
-			'expr' => 21
+			'IS' => 18,
+			'EXISTS' => 17,
+			'CMP' => 21,
+			'EQ' => 20,
+			'MATCH' => 19
 		}
 	},
 	{#State 11
 		ACTIONS => {
+			'OR' => 15,
 			")" => 22,
-			'AND' => 14,
-			'OR' => 15
+			'AND' => 14
 		}
 	},
 	{#State 12
 		ACTIONS => {
-			")" => 23,
+			'OR' => 15,
 			'AND' => 14,
-			'OR' => 15
+			")" => 23
 		}
 	},
 	{#State 13
-		DEFAULT => -3
+		ACTIONS => {
+			'OR' => 15,
+			'AND' => 14
+		},
+		DEFAULT => -8
 	},
 	{#State 14
 		ACTIONS => {
-			'NOT' => 10,
+			'NOT' => 8,
 			"(" => 7,
-			'FIELD' => 9
+			'FIELD' => 10
 		},
 		DEFAULT => -5,
 		GOTOS => {
@@ -141,9 +145,9 @@ sub new {
 	},
 	{#State 15
 		ACTIONS => {
-			'NOT' => 10,
+			'NOT' => 8,
 			"(" => 7,
-			'FIELD' => 9
+			'FIELD' => 10
 		},
 		DEFAULT => -5,
 		GOTOS => {
@@ -151,46 +155,42 @@ sub new {
 		}
 	},
 	{#State 16
-		ACTIONS => {
-			'PATTERN' => 26
-		}
+		DEFAULT => -3
 	},
 	{#State 17
-		ACTIONS => {
-			'NUMBER' => 31,
-			'STRING' => 30,
-			'FIELD' => 28
-		},
-		GOTOS => {
-			'value' => 29,
-			'field' => 27
-		}
+		DEFAULT => -14
 	},
 	{#State 18
 		ACTIONS => {
-			'EMPTY' => 33,
-			'NOT' => 32
+			'NOT' => 27,
+			'EMPTY' => 26
 		}
 	},
 	{#State 19
-		DEFAULT => -14
+		ACTIONS => {
+			'PATTERN' => 28
+		}
 	},
 	{#State 20
 		ACTIONS => {
-			'FIELD' => 28,
-			'NUMBER' => 36
+			'STRING' => 31,
+			'FIELD' => 32,
+			'NUMBER' => 30
 		},
 		GOTOS => {
-			'number' => 34,
-			'field' => 35
+			'field' => 29,
+			'value' => 33
 		}
 	},
 	{#State 21
 		ACTIONS => {
-			'AND' => 14,
-			'OR' => 15
+			'NUMBER' => 35,
+			'FIELD' => 32
 		},
-		DEFAULT => -8
+		GOTOS => {
+			'number' => 34,
+			'field' => 36
+		}
 	},
 	{#State 22
 		ACTIONS => {
@@ -207,45 +207,45 @@ sub new {
 		DEFAULT => -7
 	},
 	{#State 26
-		DEFAULT => -10
+		DEFAULT => -12
 	},
 	{#State 27
-		DEFAULT => -18
-	},
-	{#State 28
-		DEFAULT => -21
-	},
-	{#State 29
-		DEFAULT => -9
-	},
-	{#State 30
-		DEFAULT => -16
-	},
-	{#State 31
-		DEFAULT => -17
-	},
-	{#State 32
 		ACTIONS => {
 			'EMPTY' => 38
 		}
 	},
+	{#State 28
+		DEFAULT => -10
+	},
+	{#State 29
+		DEFAULT => -18
+	},
+	{#State 30
+		DEFAULT => -17
+	},
+	{#State 31
+		DEFAULT => -16
+	},
+	{#State 32
+		DEFAULT => -21
+	},
 	{#State 33
-		DEFAULT => -12
+		DEFAULT => -9
 	},
 	{#State 34
 		DEFAULT => -11
 	},
 	{#State 35
-		DEFAULT => -20
+		DEFAULT => -19
 	},
 	{#State 36
-		DEFAULT => -19
+		DEFAULT => -20
 	},
 	{#State 37
 		ACTIONS => {
-			'NOT' => 10,
+			'FIELD' => 10,
 			"(" => 7,
-			'FIELD' => 9
+			'NOT' => 8
 		},
 		DEFAULT => -5,
 		GOTOS => {
@@ -258,8 +258,8 @@ sub new {
 	{#State 39
 		ACTIONS => {
 			'OR' => 15,
-			";" => 40,
-			'AND' => 14
+			'AND' => 14,
+			";" => 40
 		}
 	},
 	{#State 40
@@ -445,6 +445,7 @@ sub yylex
 
 	$Y->YYData->{DATA} =~ s/^( path
 	                         | filename
+	                         | type
 	                         )\b//xi                 and return ('FIELD', "_$1");
 
 	$Y->YYData->{DATA} =~ s/^( album-?artist

@@ -113,6 +113,7 @@ sub metadata
 	}
 	$metadata{_path} = $file;
 	($metadata{_filename} = $file) =~ s|.*/||;
+	($metadata{_type} = lc($file)) =~ s/.*\.//;
 
 	\%metadata;
 }
