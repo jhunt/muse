@@ -5,6 +5,7 @@ use warnings;
 use File::Temp qw/tempfile/;
 use Digest::SHA;
 use Music::Tag;
+use Cwd qw/abs_path/;
 use base qw/Exporter/;
 our @EXPORT = qw/
 	waveform_checksum
@@ -111,7 +112,7 @@ sub metadata
 		$metadata{$_} = $info->get_data($_)
 			if $info->has_data($_);
 	}
-	$metadata{_path} = $file;
+	$metadata{_path} = abs_path($file);
 	($metadata{_filename} = $file) =~ s|.*/||;
 	($metadata{_type} = lc($file)) =~ s/.*\.//;
 
