@@ -59,7 +59,6 @@ sub waveform_checksum
 	if ($ext eq 'ogg') {
 		_run(qq(oggdec -Q -o $tmp "$file" 2>&1))
 			or die "OGG Vorbis decode of $file failed\n";
-		$sha->addfile($tmp);
 
 	} elsif ($ext eq 'mp3') {
 		_run(qq(lame --decode "$file" $tmp 2>&1))
@@ -73,6 +72,7 @@ sub waveform_checksum
 		die "Unrecognized file extension ($file)\n";
 	}
 
+	$sha->addfile($tmp);
 	unlink $tmp;
 	return $sha->hexdigest;
 }
