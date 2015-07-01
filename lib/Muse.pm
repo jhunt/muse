@@ -90,6 +90,7 @@ sub fields
 	qw/
 		album albumartist albumrating albumsortname
 		artist originalartist composer
+		compilation
 		asin upc
 		title compilation sortname genre
 		comment copyright rating
