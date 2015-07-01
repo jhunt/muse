@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Muse;
+
+my @files = provided_files;
+
+for (sort @files) {
+	my $path = $_;
+
+	my $info = metadata($path);
+
+	my $meta = {};
+	if (m/^(\d+)\.(\d+)\ (.*?)\.(mp3|flac|ogg)$/) {
+		$meta = {
+			disc  => $1 + 0,
+			track => $2 + 0,
+			title => $3,
+		};
+	} elsif (m/^(\d+)\ (.*?)\.(mp3|flac|ogg)$/) {
+		$meta = {
+			track => $1 + 0,
+			title => $2,
+		}
+	} else {
+		print "$path has bad format; skipping\n";
+		next;
+	}
+
+	print qq($path: $_ => "$meta->{$_}"\n)
+		for sort keys %$meta;
+	set_metadata($_, $meta);
+}
