@@ -11,6 +11,15 @@ for (provided_files) {
 	my $sha = waveform_checksum($_);
 	push @{ $shas{$sha} }, $_;
 }
+print "\n";
 
-use Data::Dumper;
-print Dumper(\%shas);
+my $n = 0;
+for (values %shas) {
+	next unless @$_ > 1;
+	print "duplicates: ".shift @$_."\n";
+	print "            $_\n" for @$_;
+	print "\n";
+	$n++;
+}
+
+printf "%i duplicate%s found.\n", $n, $n == 1 ? '' : 's';
