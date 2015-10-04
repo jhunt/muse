@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Getopt::Long qw/:config bundling/;
+use JSON;
+use Muse;
+
+my %OPTIONS = ();
+GetOptions \%OPTIONS, qw/
+	help|h|?
+	debug|D
+
+	root|r=s
+	exclude|x=s
+	include|i=s
+	type|t=s
+/;
+
+my %DATA = (
+	type     => $OPTIONS{type},
+	children => {
+		current => 0,
+		items   => []
+	}
+);
+my $dir = shift @ARGV or die "USAGE: $0 [options] path/to/dir\n";
+opendir my $dh, $dir or die "$dir: $!\n";
+while (readdir $dh) {
+	next if $_ eq '.' or $_ eq '..';
+	next if $OPTIONS{exclude} and $_ =~ m/$OPTIONS{exclude}/;
+	next if $OPTIONS{include} and $_ !~ m/$OPTIONS{include}/;
+
+	if ($DATA{type} eq 'tracks') {
+		next unless -f "$dir/$_";
+		if (m/^(\d+) (.*)\.flac$/) {
+			push @{ $DATA{children}{items} }, {
+				track  => $1,
+				sort   => sprintf("%04i-%04i", 0, $1),
+				title  => sprintf("%02i. %s", $1, $2),
+				artist => 'FIXME',
+				path   => "$OPTIONS{root}/$_",
+			};
+
+		} elsif (m/^(\d+)\.(\d+) (.*)\.flac$/) {
+			push @{ $DATA{children}{items} }, {
+				disc   => $1,
+				track  => $2,
+				sort   => sprintf("%04i-%04i", $1, $2),
+				title  => sprintf("%i.%02i. %s", $1, $2, $3),
+				artist => 'FIXME',
+				path   => "$OPTIONS{root}/$_",
+			};
+		}
+
+	} else {
+		next unless -d "$dir/$_";
+		push @{ $DATA{children}{items} }, {
+			name => $_,
+			sort => m/^The\s+(.*)/ ? $1 : $_,
+			path => "$OPTIONS{root}/$_",
+		};
+	}
+}
+closedir $dh;
+
+$DATA{children}{items} = [ sort { $a->{sort} cmp $b->{sort} } @{ $DATA{children}{items} } ];
+print JSON->new->utf8->encode(\%DATA);
