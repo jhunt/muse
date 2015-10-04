@@ -34,7 +34,7 @@ sub check
 	}
 }
 
-sub _esc { my $s = $_[0]; $s =~ s|/|_|g; $s; }
+sub _esc { my $s = $_[0]; $s =~ s{[<>/:"|?*]}{_}g; $s; }
 sub _val
 {
 	my ($I, $e) = @_;
