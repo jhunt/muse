@@ -139,27 +139,13 @@ sub set_metadata
 sub convert
 {
 	my ($from, $fmt, $force) = @_;
-	my %decode = (
-		ogg => qq(oggdec -Q -o "{{X}}.wav" "{{X}}.ogg"),
-		mp3 => qq(lame --decode "{{X}}.mp3" "{{X}}.wav"),
-	);
-	my %encode = (
-		flac => qq(flac -s "{{X}}.wav" && rm "{{X}}.wav"),
-	);
-
-	my $ext  = _ext($from);
 	my $base = _base($from);
-	return "$base.$fmt" if -f "$base.$fmt" and !$force;
+	return "$base.$fmt"
+		if -f "$base.$fmt" and !$force;
 
-	$decode{$ext} or die "Don't know how to decode .$ext files\n";
-	$encode{$fmt} or die "Don't know how to encode .$fmt files\n";
-
-	(my $cmd1 = $decode{$ext}) =~ s/{{X}}/_base($from)/ge;
-	(my $cmd2 = $encode{$fmt}) =~ s/{{X}}/_base($from)/ge;
-
-	_run(qq($cmd1 && $cmd2))
+	my ($a, $b) = map { s/"/\\"/g; $_ } ($from, "$base.$fmt");
+	_run(qq(avconv -i "$a" "$b"))
 		or return undef;
-
 	"$base.$fmt";
 }
 
