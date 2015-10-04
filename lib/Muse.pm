@@ -105,7 +105,7 @@ sub fields
 sub metadata
 {
 	my ($file) = @_;
-	my $info = Music::Tag->new($_, { quiet => 1 });
+	my $info = Music::Tag->new($file, { quiet => 1 });
 	$info->get_tag;
 
 	my %metadata;

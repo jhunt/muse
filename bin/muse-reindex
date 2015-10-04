@@ -5,6 +5,7 @@ use warnings;
 use Getopt::Long qw/:config bundling/;
 use JSON;
 use Muse;
+use Pod::Usage;
 
 my %OPTIONS = ();
 GetOptions \%OPTIONS, qw/
@@ -14,55 +15,160 @@ GetOptions \%OPTIONS, qw/
 	root|r=s
 	exclude|x=s
 	include|i=s
-	type|t=s
-/;
+	index|I=s@
+/ or pod2usage(2);
+pod2usage(1) if $OPTIONS{help};
+pod2usage("Missing required --root argument") unless $OPTIONS{root};
+pod2usage("Missing at least one --index argument") unless @{ $OPTIONS{index} };
 
-my %DATA = (
-	type     => $OPTIONS{type},
-	children => {
-		current => 0,
-		items   => []
-	}
-);
-my $dir = shift @ARGV or die "USAGE: $0 [options] path/to/dir\n";
-opendir my $dh, $dir or die "$dir: $!\n";
-while (readdir $dh) {
-	next if $_ eq '.' or $_ eq '..';
-	next if $OPTIONS{exclude} and $_ =~ m/$OPTIONS{exclude}/;
-	next if $OPTIONS{include} and $_ !~ m/$OPTIONS{include}/;
 
-	if ($DATA{type} eq 'tracks') {
-		next unless -f "$dir/$_";
-		if (m/^(\d+) (.*)\.flac$/) {
-			push @{ $DATA{children}{items} }, {
-				track  => $1,
-				sort   => sprintf("%04i-%04i", 0, $1),
-				title  => sprintf("%02i. %s", $1, $2),
-				artist => 'FIXME',
-				path   => "$OPTIONS{root}/$_",
+sub manifest
+{
+	my (%options) = @_;
+	my %data = (
+		type     => $options{type},
+		children => {
+			current => 0,
+			items   => []
+		}
+	);
+	my $dir = "$options{root}$options{path}";
+	opendir my $dh, $dir or die "$dir: $!\n";
+	while (readdir $dh) {
+		next if $_ eq '.' or $_ eq '..';
+		next if $options{exclude} and $_ =~ m/$options{exclude}/;
+		next if $options{include} and $_ !~ m/$options{include}/;
+
+		if ($data{type} eq 'tracks') {
+			next unless -f "$dir/$_" and m/\.flac$/;
+			my $meta = eval { metadata "$dir/$_"; } || {};
+			my $track = {
+				(map { $meta->{$_} ? ($_ => $meta->{$_}) : () }
+					qw/artist album genre title year/),
+				path => "$options{path}/$_",
 			};
+			if (m/^(\d+) (.*)\.flac$/) {
+				$track->{title} ||= $2;
+				push @{ $data{children}{items} }, {
+					%$track,
+					track  => $1,
+					sort   => sprintf("%04i-%04i", 0, $1),
+					listas => sprintf("%02i. %s", $1, $track->{title}),
+				};
 
-		} elsif (m/^(\d+)\.(\d+) (.*)\.flac$/) {
-			push @{ $DATA{children}{items} }, {
-				disc   => $1,
-				track  => $2,
-				sort   => sprintf("%04i-%04i", $1, $2),
-				title  => sprintf("%i.%02i. %s", $1, $2, $3),
-				artist => 'FIXME',
-				path   => "$OPTIONS{root}/$_",
+			} elsif (m/^(\d+)\.(\d+) (.*)\.flac$/) {
+				$track->{title} ||= $2;
+				push @{ $data{children}{items} }, {
+					%$track,
+					disc   => $1,
+					track  => $2,
+					sort   => sprintf("%04i-%04i", $1, $2),
+					listas => sprintf("%i.%02i. %s", $1, $2, $track->{title}),
+				};
+			}
+
+		} else {
+			next unless -d "$dir/$_";
+			push @{ $data{children}{items} }, {
+				name => $_,
+				sort => m/^The\s+(.*)/ ? $1 : $_,
+				path => "$options{path}/$_",
 			};
 		}
-
-	} else {
-		next unless -d "$dir/$_";
-		push @{ $DATA{children}{items} }, {
-			name => $_,
-			sort => m/^The\s+(.*)/ ? $1 : $_,
-			path => "$OPTIONS{root}/$_",
-		};
 	}
-}
-closedir $dh;
+	closedir $dh;
 
-$DATA{children}{items} = [ sort { $a->{sort} cmp $b->{sort} } @{ $DATA{children}{items} } ];
-print JSON->new->utf8->encode(\%DATA);
+	$data{children}{items} = [ sort { $a->{sort} cmp $b->{sort} } @{ $data{children}{items} } ];
+	\%data;
+}
+sub write_json
+{
+	my ($path, $data) = @_;
+	open my $fh, ">", "$path/muse.json" or die "Failed to open $path/muse.json: $!\n";
+	print $fh JSON->new->utf8->encode($data);
+	close $fh
+}
+sub recurse
+{
+	my (%options) = @_;
+	return if !$options{types} || @{$options{types}} == 0;
+	my $type = shift @{$options{types}};
+	my $level = manifest(%options, type => $type);
+	write_json("$options{root}$options{path}", $level);
+
+	return unless @{$options{types}};
+
+	recurse(%options,
+		path  => $_->{path},
+		types => [@{$options{types}}])
+			for @{ $level->{children}{items} };
+}
+
+# reindex --index /Music=artist/album --index /Soundtracks=/album
+for (@{ $OPTIONS{index} }) {
+	die "Invalid --index specification '$_' (must be '/path=type/subtype')\n"
+		unless m/^(\/.*?)=(.*)$/;
+
+	my ($dir, $types) = ($1, $2);
+	my @types = split '/', $types;
+
+	recurse(
+		exclude => $OPTIONS{exclude},
+		include => $OPTIONS{include},
+		types   => [@types],
+		path    => $dir,
+		root    => $OPTIONS{root},
+	);
+}
+
+=head1 NAME
+
+muse-reindex - Regenerate a Muse Volume's Metadata Index
+
+=head1 SYNOPSIS
+
+muse reindex --index /Music=artists/albums/tracks \
+             --index /Soundtracks=albums/tracks
+
+=head1 DESCRIPTION
+
+Generates the necessary muse.json files for the Roku application.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Show this help screen.
+
+=item B<-r>, B<--root> I<PATH>
+
+Root of the Muse Volume, relative to which all object (artist / album /
+track) path will be taken.
+
+This option is B<required>.
+
+=item B<-x>, B<--exclude> I<PATTERN>
+
+Paths to exclude form the metadata search.
+
+=item B<-i>, B<--include> I<PATTERN>
+
+Paths to explicitly include in the metadata search.  All other paths will be
+ignored if B<-i> is specified.
+
+=item B<-I>, B<--index> I</path=type1/type2/...>
+
+A sub-directory of B<--root> to index, and the directory hierarchy.  Valid
+values for the I<typeN> components are B<artists>, B<albums> and B<tracks>.
+
+This option is B<required>, and may be specified multiple times.
+
+=back
+
+=head1 AUTHOR
+
+Written by James Hunt B<< <james@niftylogic.com> >>.
+
+=cut
