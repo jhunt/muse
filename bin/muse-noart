@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use File::Find;
+use JSON;
+
+sub slurp
+{
+	open my $fh, "<", $_[0];
+	my $s = do { local $/; <$fh> };
+	close $fh;
+	return $s;
+}
+
+find(sub {
+		return unless -d $_ and -f "$_/muse.json";
+		my $data = JSON->new->utf8->decode(slurp("$_/muse.json"));
+		if ($data->{type} eq "tracks") {
+			return if -f "$_/album.png";
+		} else {
+			return if -f "$_/muse.png";
+		}
+		print "$File::Find::name\n";
+	}, @ARGV);
